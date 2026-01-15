@@ -32,21 +32,23 @@ docker compose up -d
 
 | Service   | Image                  | Port |
 |-----------|------------------------|------|
-| SonarQube | sonarqube:10.7-community | 9000 |
+| SonarQube | sonarqube:community    | 9000 |
 | PostgreSQL| postgres:15            | 5432 (internal) |
 
 ## Upgrading SonarQube
 
 To upgrade to a newer version:
 
-1. Update the image tag in `docker-compose.yml`
+1. Update the image tag in `docker-compose.yml` (or use `community` tag for latest)
 2. Run the following commands:
 
 ```bash
-docker compose down
+docker compose down -v
 docker compose pull
 docker compose up -d
 ```
+
+> **Warning**: Using `-v` removes all volumes including data. If upgrading between major versions, Elasticsearch indexes may be incompatible and require a clean install.
 
 > **Note**: Always check the [SonarQube release notes](https://www.sonarsource.com/products/sonarqube/downloads/) for breaking changes before upgrading.
 
