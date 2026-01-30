@@ -1,14 +1,65 @@
 services:
+  # =========================
+  # SQL SERVER
+  # =========================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:latest
+    container_name: sqlserver
+    hostname: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "StrongPassword123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: >
+        /opt/mssql-tools/bin/sqlcmd
+        -S localhost
+        -U sa
+        -P StrongPassword123!
+        -Q "SELECT 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # =========================
+  # AZURITE
+  # =========================
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: azurite
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --debug /data/debug.log
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - azurite_data:/data
+    restart: unless-stopped
+
+  # =========================
+  # SONARQUBE
+  # =========================
   sonarqube:
     image: sonarqube:community
     container_name: sonarqube
     depends_on:
-      db:
+      sonarqube_db:
         condition: service_healthy
     ports:
       - "9000:9000"
     environment:
-      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube_db:5432/sonar
       SONAR_JDBC_USERNAME: sonar
       SONAR_JDBC_PASSWORD: sonar
     volumes:
@@ -21,15 +72,17 @@ services:
         hard: 65536
     restart: unless-stopped
 
-  db:
+  sonarqube_db:
     image: postgres:15
     container_name: sonarqube_db
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_USER: sonar
       POSTGRES_PASSWORD: sonar
       POSTGRES_DB: sonar
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - sonarqube_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
       interval: 10s
@@ -37,8 +90,76 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # =========================
+  # APP POSTGRES (PGVECTOR)
+  # =========================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: cv_ats_writer
+      POSTGRES_PASSWORD: cv_ats_writer_dev
+      POSTGRES_DB: cv_ats_writer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cv_ats_writer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =========================
+  # REDIS
+  # =========================
+  redis:
+    image: redis:7-alpine
+    container_name: redis-db
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =========================
+  # MINIO
+  # =========================
+  minio:
+    image: minio/minio:latest
+    container_name: minio-s3
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+# =========================
+# VOLUMES
+# =========================
 volumes:
+  sqlserver_data:
+  azurite_data:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
-  postgresql_data:
+  sonarqube_postgres_data:
+  postgres_data:
+  redis_data:
+  minio_data:
