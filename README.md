@@ -1,12 +1,12 @@
 # Local Docker Compose
 
-This repository contains a Docker Compose setup for local development. The canonical compose file is `.docker-compose.yml` — it brings up SonarQube (with its dedicated PostgreSQL), development databases, object storage emulators and caches used by projects in this workspace.
+This repository contains a Docker Compose setup for local development. The canonical compose file is `docker-compose.yml` — it brings up SonarQube (with its dedicated PostgreSQL), development databases, object storage emulators and caches used by projects in this workspace.
 
 ---
 
 ## Scope
 
-This README documents the services defined in `.docker-compose.yml` and how to run them on Windows (PowerShell) or WSL.
+This README documents the services defined in `docker-compose.yml` and how to run them on Windows (PowerShell) or WSL.
 
 Services included (high-level):
 - `sonarqube` + `sonarqube_db` — SonarQube (Community) with Postgres
@@ -15,6 +15,7 @@ Services included (high-level):
 - `redis` — Redis cache
 - `minio` — S3-compatible object store (console on :9001)
 - `azurite` — Azure Storage emulator
+- `mongo` — MongoDB database
 
 ---
 
@@ -55,6 +56,7 @@ docker compose logs -f sonarqube
 | Redis          | `redis:7-alpine`         | `6379:6379`                  | cache |
 | MinIO (S3)     | `minio/minio:latest`     | `9002:9000`, `9001:9001`     | S3 API on 9002, console on 9001 |
 | Azurite        | `mcr.microsoft.com/azure-storage/azurite:latest` | `10000-10002:10000-10002` | Blob/Queue/Table emulation |
+| MongoDB        | `mongo:latest`           | `27017:27017`                | UI: N/A, data on port 27017 |
 
 > Note: `sonarqube_db` intentionally maps to host **5433** so it doesn't conflict with the app Postgres on **5432**.
 
@@ -64,7 +66,7 @@ docker compose logs -f sonarqube
 
 The compose file creates these volumes (persisted by Docker):
 - `sonarqube_data`, `sonarqube_extensions`, `sonarqube_logs`, `sonarqube_postgres_data`
-- `postgres_data`, `sqlserver_data`, `redis_data`, `minio_data`, `azurite_data`
+- `postgres_data`, `sqlserver_data`, `redis_data`, `minio_data`, `azurite_data`, `mongo_data`
 
 Backup example (PowerShell) — export Sonar Postgres volume:
 
@@ -89,6 +91,7 @@ docker run --rm -v sonarqube_postgres_data:/data -v ${PWD}:/backup alpine \
 - SonarQube UI: `admin` / `admin` (unchanged by compose)
 - SonarQube DB: `POSTGRES_USER=sonar` / `POSTGRES_PASSWORD=sonar`
 - MinIO: `MINIO_ROOT_USER=minioadmin` / `MINIO_ROOT_PASSWORD=minioadmin`
+- MongoDB: `mongo` / `mongo` (root user/password)
 - SQL Server SA password is set in the compose (change before sharing)
 
 **DO NOT** use these credentials in production. Change secrets via environment variables or an env-file.
@@ -138,7 +141,7 @@ docker compose logs -f sonarqube
 ## Upgrading SonarQube
 
 1. Read SonarQube release notes for breaking changes.
-2. Update the `image` tag for `sonarqube` in `.docker-compose.yml`.
+2. Update the `image` tag for `sonarqube` in `docker-compose.yml`.
 3. Backup volumes (see Backup example).
 4. Run:
 
