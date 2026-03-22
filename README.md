@@ -16,6 +16,9 @@ Services included (high-level):
 - `minio` — S3-compatible object store (console on :9001)
 - `azurite` — Azure Storage emulator
 - `mongo` — MongoDB database
+- `rabbitmq` — RabbitMQ message broker
+- `kafka` + `zookeeper` — Confluent Kafka event streaming
+- `tomcat` — Apache Tomcat 10.1 server
 
 ---
 
@@ -57,6 +60,10 @@ docker compose logs -f sonarqube
 | MinIO (S3)     | `minio/minio:latest`     | `9002:9000`, `9001:9001`     | S3 API on 9002, console on 9001 |
 | Azurite        | `mcr.microsoft.com/azure-storage/azurite:latest` | `10000-10002:10000-10002` | Blob/Queue/Table emulation |
 | MongoDB        | `mongo:latest`           | `27017:27017`                | UI: N/A, data on port 27017 |
+| RabbitMQ       | `rabbitmq:management`    | `5672:5672`, `15672:15672`   | AMQP on 5672, UI on http://localhost:15672 |
+| Zookeeper      | `confluentinc/cp-zookeeper:7.7.7` | `2181:2181`         |       |
+| Kafka          | `confluentinc/cp-kafka:7.7.7`     | `9092:9092`, `9093:9093` | Host plaintext on 9092 |
+| Tomcat         | `tomcat:10.1-jdk17`      | `8080:8080`                  | UI: http://localhost:8080 |
 
 > Note: `sonarqube_db` intentionally maps to host **5433** so it doesn't conflict with the app Postgres on **5432**.
 
@@ -67,6 +74,7 @@ docker compose logs -f sonarqube
 The compose file creates these volumes (persisted by Docker):
 - `sonarqube_data`, `sonarqube_extensions`, `sonarqube_logs`, `sonarqube_postgres_data`
 - `postgres_data`, `sqlserver_data`, `redis_data`, `minio_data`, `azurite_data`, `mongo_data`
+- `rabbitmq_data`, `zookeeper_data`, `zookeeper_log`, `kafka_data`, `tomcat_webapps`, `tomcat_logs`
 
 Backup example (PowerShell) — export Sonar Postgres volume:
 
@@ -92,6 +100,7 @@ docker run --rm -v sonarqube_postgres_data:/data -v ${PWD}:/backup alpine \
 - SonarQube DB: `POSTGRES_USER=sonar` / `POSTGRES_PASSWORD=sonar`
 - MinIO: `MINIO_ROOT_USER=minioadmin` / `MINIO_ROOT_PASSWORD=minioadmin`
 - MongoDB: `mongo` / `mongo` (root user/password)
+- RabbitMQ UI: `admin` / `admin123`
 - SQL Server SA password is set in the compose (change before sharing)
 
 **DO NOT** use these credentials in production. Change secrets via environment variables or an env-file.
@@ -107,7 +116,7 @@ docker run --rm -v sonarqube_postgres_data:/data -v ${PWD}:/backup alpine \
 sudo sysctl -w vm.max_map_count=262144
 ```
 
-- Port conflicts: compose exposes multiple DBs — confirm nothing else is listening on `5432`, `1433`, `9000`, etc.
+- Port conflicts: compose exposes multiple DBs and services — confirm nothing else is listening on `5432`, `1433`, `9000`, `8080`, `5672`, `9092`, etc.
 - Windows file sharing / permissions can slow bind-mounted volumes; use named volumes (this compose uses them).
 - If you change DB images or wipe volumes, you may need to reinitialize SonarQube data (backup first).
 
