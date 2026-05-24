@@ -248,6 +248,66 @@ services:
       - tomcat_webapps:/usr/local/tomcat/webapps
       - tomcat_logs:/usr/local/tomcat/logs
     restart: unless-stopped
+
+# =========================
+# ORACLE
+# =========================
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-xe
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    environment:
+      ORACLE_PASSWORD: oracle
+      ORACLE_DATABASE: XEPDB1
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    restart: unless-stopped
+
+# =========================
+# POSTGRES N8N
+# =========================
+  postgres-n8n:
+    image: postgres:15.5
+    container_name: n8n_postgres
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8npass
+      - POSTGRES_DB=n8n
+    volumes:
+      - postgres_data_n8n:/var/lib/postgresql/data
+    restart: always
+
+# =========================
+# N8N
+# =========================
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    # Eliminamos 'user: root' y 'command' para evitar el error de /bin/sh
+    ports:
+      - "5678:5678"
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres-n8n
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8npass
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      # Estas variables permiten escribir en carpetas externas sin bloqueos de seguridad
+      - N8N_BLOCK_FS_WRITE_ACCESS=false
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+    depends_on:
+      - postgres-n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Mapeamos M: a una ruta que n8n controla por defecto
+      - /mnt/m/n8n:/home/node/n8n_storage
+    restart: always
     
 # =========================
 # VOLUMES
@@ -269,3 +329,6 @@ volumes:
   kafka_data:
   tomcat_webapps:
   tomcat_logs:
+  oracle-data:
+  postgres_data_n8n:
+  n8n_data:
