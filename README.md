@@ -19,6 +19,8 @@ Services included (high-level):
 - `rabbitmq` — RabbitMQ message broker
 - `kafka` + `zookeeper` — Confluent Kafka event streaming
 - `tomcat` — Apache Tomcat 10.1 server
+- `oracle-db` — Oracle XE 21c database
+- `postgres-n8n` + `n8n` — n8n workflow automation with dedicated Postgres
 
 ---
 
@@ -64,6 +66,9 @@ docker compose logs -f sonarqube
 | Zookeeper      | `confluentinc/cp-zookeeper:7.7.7` | `2181:2181`         |       |
 | Kafka          | `confluentinc/cp-kafka:7.7.7`     | `9092:9092`, `9093:9093` | Host plaintext on 9092 |
 | Tomcat         | `tomcat:10.1-jdk17`      | `8080:8080`                  | UI: http://localhost:8080 |
+| Oracle XE      | `gvenzl/oracle-xe:21-slim` | `1521:1521`, `5500:5500`   | DB listener and Oracle EM Express |
+| n8n Postgres   | `postgres:15.5`          | N/A                           | Internal DB for n8n (not exposed on host) |
+| n8n            | `n8nio/n8n`              | `5678:5678`                  | UI: http://localhost:5678 |
 
 > Note: `sonarqube_db` intentionally maps to host **5433** so it doesn't conflict with the app Postgres on **5432**.
 
@@ -75,6 +80,7 @@ The compose file creates these volumes (persisted by Docker):
 - `sonarqube_data`, `sonarqube_extensions`, `sonarqube_logs`, `sonarqube_postgres_data`
 - `postgres_data`, `sqlserver_data`, `redis_data`, `minio_data`, `azurite_data`, `mongo_data`
 - `rabbitmq_data`, `zookeeper_data`, `zookeeper_log`, `kafka_data`, `tomcat_webapps`, `tomcat_logs`
+- `oracle-data`, `postgres_data_n8n`, `n8n_data`
 
 Backup example (PowerShell) — export Sonar Postgres volume:
 
@@ -101,6 +107,9 @@ docker run --rm -v sonarqube_postgres_data:/data -v ${PWD}:/backup alpine \
 - MinIO: `MINIO_ROOT_USER=minioadmin` / `MINIO_ROOT_PASSWORD=minioadmin`
 - MongoDB: `mongo` / `mongo` (root user/password)
 - RabbitMQ UI: `admin` / `admin123`
+- Oracle XE password: `oracle` (for default users)
+- n8n Postgres: `n8n` / `n8npass` (DB: `n8n`)
+- n8n UI Basic Auth: `admin` / `admin123`
 - SQL Server SA password is set in the compose (change before sharing)
 
 **DO NOT** use these credentials in production. Change secrets via environment variables or an env-file.
